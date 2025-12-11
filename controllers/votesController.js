@@ -21,9 +21,14 @@ function readVotes() {
  */
 function writeVotes(votes) {
   try {
+    const dataDir = path.dirname(votesFilePath);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
     fs.writeFileSync(votesFilePath, JSON.stringify(votes, null, 2), 'utf8');
   } catch (error) {
     console.error('Ошибка записи votes.json:', error);
+    throw error;
   }
 }
 
@@ -62,8 +67,9 @@ function getAllVotes(req, res) {
 function getVoteById(req, res) {
   const votes = readVotes();
   const id = req.params.id;
+  const numId = parseInt(id, 10);
   
-  if (!votes.hasOwnProperty(id) || id < '1' || id > '5') {
+  if (!votes.hasOwnProperty(id) || numId < 1 || numId > 5 || isNaN(numId)) {
     return res.status(404).json({ 
       error: 'Вариант не найден. Допустимые значения: 1-5' 
     });

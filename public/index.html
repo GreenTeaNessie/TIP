@@ -48,8 +48,8 @@
   <body>
     <div id="root"></div>
 
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js" integrity="sha384-/KNQL8Nu5gCHLqwqfQjA689Hhoqgi2S84SNUxC3roTe4EhJ9AfLkp8QiQcU8AMzI" ></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js" integrity="sha384-CM8tU7i3nqcJrg4YuHKQxaviH9OuVgMKGVkJfOjhIdbP8N51dLMzcNpqjQmh5sCO" ></script>
 
     <script>
       const { useState, useEffect } = React;
@@ -171,16 +171,24 @@
             },
             body: JSON.stringify({ optionId }),
           })
-            .then(response => response.json())
+            .then(response => {
+              if (!response.ok) {
+                throw new Error('Failed to submit vote');
+              }
+              return response.json();
+            })
             .then(data => {
-              // Обновление локального состояния
-              setVotes((prev) => ({
-                ...prev,
-                [optionId]: (prev[optionId] || 0) + 1,
-              }));
+              if (data.success) {
+                // Обновление локального состояния только при успешном ответе
+                setVotes((prev) => ({
+                  ...prev,
+                  [optionId]: (prev[optionId] || 0) + 1,
+                }));
+              }
             })
             .catch(error => {
               console.error('Ошибка при голосовании:', error);
+              alert('Не удалось отправить голос. Попробуйте снова.');
             });
         };
 
@@ -189,17 +197,25 @@
           fetch('/api/votes', {
             method: 'DELETE',
           })
-            .then(response => response.json())
+            .then(response => {
+              if (!response.ok) {
+                throw new Error('Failed to reset votes');
+              }
+              return response.json();
+            })
             .then(data => {
-              // Обнуление локального состояния
-              const emptyVotes = options.reduce((acc, option) => {
-                acc[option.id] = 0;
-                return acc;
-              }, {});
-              setVotes(emptyVotes);
+              if (data.success) {
+                // Обнуление локального состояния только при успешном ответе
+                const emptyVotes = options.reduce((acc, option) => {
+                  acc[option.id] = 0;
+                  return acc;
+                }, {});
+                setVotes(emptyVotes);
+              }
             })
             .catch(error => {
               console.error('Ошибка при сбросе:', error);
+              alert('Не удалось сбросить результаты. Попробуйте снова.');
             });
         };
 
