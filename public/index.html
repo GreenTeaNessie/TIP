@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Голосование</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        background-color: #f5f5f5;
+      }
+
+      .container {
+        max-width: 480px;
+        margin: 40px auto;
+        padding: 24px;
+        background-color: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+      }
+
+      button {
+        font-size: 14px;
+      }
+
+      .option-button {
+        display: block;
+        margin-bottom: 8px;
+        padding: 8px 12px;
+        min-width: 160px;
+      }
+
+      .reset-button {
+        margin-top: 16px;
+        padding: 8px 12px;
+        background-color: #f44336;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .reset-button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <script>
+      const { useState, useEffect } = React;
+
+      function OptionList({ options, onVote }) {
+        return React.createElement(
+          "div",
+          { style: { marginBottom: "16px" } },
+          [
+            React.createElement("h2", { key: "title" }, "Выберите вариант"),
+            ...options.map((option) =>
+              React.createElement(
+                "button",
+                {
+                  key: option.id,
+                  onClick: () => onVote(option.id),
+                  className: "option-button",
+                },
+                option.label
+              )
+            ),
+          ]
+        );
+      }
+
+      function ResultList({ options, votes }) {
+        const totalVotes = Object.values(votes).reduce((sum, v) => sum + v, 0);
+
+        if (totalVotes === 0) {
+          return React.createElement(
+            "div",
+            null,
+            React.createElement("h2", null, "Результаты"),
+            React.createElement("p", null, "Пока никто не проголосовал.")
+          );
+        }
+
+        return React.createElement(
+          "div",
+          null,
+          [
+            React.createElement("h2", { key: "title" }, "Результаты"),
+            React.createElement(
+              "p",
+              { key: "total" },
+              "Всего голосов: ",
+              totalVotes
+            ),
+            React.createElement(
+              "ul",
+              { key: "list" },
+              options.map((option) => {
+                const count = votes[option.id] || 0;
+                const percent = totalVotes
+                  ? ((count / totalVotes) * 100).toFixed(1)
+                  : 0;
+                return React.createElement(
+                  "li",
+                  { key: option.id },
+                  React.createElement("strong", null, option.label),
+                  ": ",
+                  count,
+                  " голос(ов) (",
+                  percent,
+                  "%)"
+                );
+              })
+            ),
+          ]
+        );
+      }
+
+      function ResetButton({ onReset, disabled }) {
+        return React.createElement(
+          "button",
+          {
+            onClick: onReset,
+            className: "reset-button",
+            disabled,
+          },
+          "Сбросить результаты"
+        );
+      }
+
+      function App() {
+        const options = Array.from({ length: 5 }, (_, i) => ({
+          id: String(i + 1),
+          label: String(i + 1),
+        }));
+
+        const [votes, setVotes] = useState({
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+        });
+
+        // Загрузка данных с сервера при монтировании
+        useEffect(() => {
+          fetch('/api/votes')
+            .then(response => response.json())
+            .then(data => {
+              if (data.votes) {
+                setVotes(data.votes);
+              }
+            })
+            .catch(error => {
+              console.error('Ошибка загрузки данных:', error);
+            });
+        }, []);
+
+        const handleVote = (optionId) => {
+          // Отправка голоса на сервер
+          fetch('/api/votes', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ optionId }),
+          })
+            .then(response => response.json())
+            .then(data => {
+              // Обновление локального состояния
+              setVotes((prev) => ({
+                ...prev,
+                [optionId]: (prev[optionId] || 0) + 1,
+              }));
+            })
+            .catch(error => {
+              console.error('Ошибка при голосовании:', error);
+            });
+        };
+
+        const handleReset = () => {
+          // Отправка запроса на сброс
+          fetch('/api/votes', {
+            method: 'DELETE',
+          })
+            .then(response => response.json())
+            .then(data => {
+              // Обнуление локального состояния
+              const emptyVotes = options.reduce((acc, option) => {
+                acc[option.id] = 0;
+                return acc;
+              }, {});
+              setVotes(emptyVotes);
+            })
+            .catch(error => {
+              console.error('Ошибка при сбросе:', error);
+            });
+        };
+
+        return React.createElement(
+          "div",
+          { className: "container" },
+          [
+            React.createElement(
+              "h1",
+              { key: "title" },
+              "Голосование"
+            ),
+            React.createElement(OptionList, {
+              key: "options",
+              options,
+              onVote: handleVote,
+            }),
+            React.createElement(ResultList, {
+              key: "results",
+              options,
+              votes,
+            }),
+            React.createElement(ResetButton, {
+              key: "reset",
+              onReset: handleReset,
+              disabled: Object.values(votes).reduce((s, v) => s + v, 0) === 0,
+            }),
+          ]
+        );
+      }
+
+      const rootElement = document.getElementById("root");
+      const root = ReactDOM.createRoot(rootElement);
+      root.render(React.createElement(App));
+    </script>
+  </body>
+</html>
