@@ -1,0 +1,43 @@
+[
+  {
+    "id": 1,
+    "question": "Какой ваш любимый язык программирования? ",
+    "category": "IT",
+    "options": [
+      { "id": 1, "text": "JavaScript", "votes":  15 },
+      { "id": 2, "text": "Python", "votes":  12 },
+      { "id":  3, "text": "Java", "votes": 8 },
+      { "id": 4, "text": "C++", "votes":  5 }
+    ],
+    "totalVotes":  40,
+    "isActive": true,
+    "createdAt": "2025-12-01T10:00:00.000Z"
+  },
+  {
+    "id": 2,
+    "question": "Лучшее время года для отпуска?",
+    "category": "Личное",
+    "options": [
+      { "id": 1, "text": "Лето", "votes": 25 },
+      { "id": 2, "text":  "Зима", "votes": 10 },
+      { "id": 3, "text": "Весна", "votes":  8 },
+      { "id": 4, "text": "Осень", "votes":  7 }
+    ],
+    "totalVotes": 50,
+    "isActive": true,
+    "createdAt": "2025-12-05T14:30:00.000Z"
+  },
+  {
+    "id": 3,
+    "question": "Какой формат обучения предпочитаете?",
+    "category": "Учёба",
+    "options": [
+      { "id": 1, "text":  "Онлайн", "votes": 18 },
+      { "id": 2, "text": "Офлайн", "votes": 12 },
+      { "id": 3, "text": "Гибридный", "votes": 20 }
+    ],
+    "totalVotes": 50,
+    "isActive": false,
+    "createdAt": "2025-12-10T09:00:00.000Z"
+  }
+]

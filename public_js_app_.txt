@@ -1,0 +1,363 @@
+const API_URL = "/api/polls";
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadPolls();
+  loadCategories();
+
+  document.getElementById("pollsList").addEventListener("click", (e) => {
+    const btn = e.target. closest(".vote-btn, .edit-btn, .delete-btn, .results-btn");
+    if (! btn) return;
+
+    const id = btn.dataset.id;
+    if (!id) return;
+
+    if (btn.classList. contains("vote-btn")) {
+      openVoteModal(id);
+    } else if (btn.classList.contains("results-btn")) {
+      openVoteModal(id, true);
+    } else if (btn. classList.contains("edit-btn")) {
+      openEditModal(id);
+    } else if (btn. classList.contains("delete-btn")) {
+      deletePoll(id);
+    }
+  });
+});
+
+async function loadPolls() {
+  try {
+    const response = await fetch(API_URL);
+    const polls = await response.json();
+    renderPolls(polls);
+    updateStats(polls);
+  } catch (error) {
+    console. error("Ошибка загрузки опросов:", error);
+  }
+}
+
+function renderPolls(polls) {
+  const container = document.getElementById("pollsList");
+
+  if (! polls || polls.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <h3>Опросов нет</h3>
+        <p>Создайте первый опрос! </p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = polls
+    .map(
+      (p) => `
+    <div class="poll-item ${! p.isActive ?  'poll-closed' : ''}">
+      <div class="poll-info">
+        <h3>${escapeHtml(p.question)}</h3>
+        <div class="poll-meta">
+          <span class="tag tag-votes">${p.totalVotes} голосов</span>
+          <span class="tag tag-options">${p.options.length} вариантов</span>
+          ${p.category ? `<span class="tag tag-category">${escapeHtml(p.category)}</span>` : ""}
+          <span class="tag ${p.isActive ?  'tag-active' : 'tag-closed'}">
+            ${p.isActive ? 'Активный' : 'Закрыт'}
+          </span>
+        </div>
+      </div>
+      <div class="poll-actions">
+        ${p.isActive ?  `<button class="btn btn-primary vote-btn" data-id="${p. id}">Голосовать</button>` : ''}
+        <button class="btn results-btn" data-id="${p. id}">Результаты</button>
+        <button class="btn edit-btn" data-id="${p.id}">Изменить</button>
+        <button class="btn btn-danger delete-btn" data-id="${p. id}">Удалить</button>
+      </div>
+    </div>
+  `
+    )
+    .join("");
+}
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function addOptionField() {
+  const container = document.getElementById("optionsContainer");
+  const count = container.querySelectorAll(".option-input").length + 1;
+  const input = document.createElement("input");
+  input.type = "text";
+  input. className = "option-input";
+  input.placeholder = `Вариант ${count}`;
+  container.appendChild(input);
+}
+
+async function createPoll() {
+  const question = document.getElementById("question").value.trim();
+  const category = document.getElementById("category").value.trim();
+  const optionInputs = document.querySelectorAll(".option-input");
+  const options = Array. from(optionInputs)
+    .map((input) => input.value.trim())
+    .filter((val) => val !== "");
+
+  if (!question) {
+    alert("Введите вопрос!");
+    return;
+  }
+
+  if (options.length < 2) {
+    alert("Добавьте минимум 2 варианта ответа!");
+    return;
+  }
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type":  "application/json" },
+      body:  JSON.stringify({ question, category, options }),
+    });
+
+    if (response.ok) {
+      clearForm();
+      loadPolls();
+      loadCategories();
+      alert("Опрос создан!");
+    } else {
+      const err = await response.json();
+      alert("Ошибка:  " + (err.error || "неизвестная ошибка"));
+    }
+  } catch (error) {
+    console. error("Ошибка создания:", error);
+    alert("Ошибка сети");
+  }
+}
+
+function clearForm() {
+  document.getElementById("question").value = "";
+  document.getElementById("category").value = "";
+  const container = document.getElementById("optionsContainer");
+  container.innerHTML = `
+    <input type="text" class="option-input" placeholder="Вариант 1" />
+    <input type="text" class="option-input" placeholder="Вариант 2" />
+  `;
+}
+
+async function deletePoll(id) {
+  if (! confirm("Удалить опрос?")) return;
+
+  try {
+    const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+    if (response.ok) {
+      loadPolls();
+      loadCategories();
+      alert("Опрос удалён");
+    }
+  } catch (error) {
+    console. error("Ошибка удаления:", error);
+    alert("Не удалось удалить");
+  }
+}
+
+async function openVoteModal(id, showResultsOnly = false) {
+  try {
+    const response = await fetch(`${API_URL}/${id}`);
+    if (!response.ok) throw new Error("Опрос не найден");
+    const poll = await response. json();
+
+    document.getElementById("modalQuestion").textContent = poll.question;
+
+    const optionsContainer = document.getElementById("voteOptions");
+    const resultsContainer = document. getElementById("voteResults");
+
+    if (poll.isActive && !showResultsOnly) {
+      optionsContainer.innerHTML = poll.options
+        .map(
+          (opt) => `
+        <button class="vote-option-btn" onclick="submitVote(${poll.id}, ${opt. id})">
+          ${escapeHtml(opt.text)}
+        </button>
+      `
+        )
+        .join("");
+      optionsContainer.style. display = "block";
+      resultsContainer.style.display = "none";
+    } else {
+      optionsContainer.style.display = "none";
+      resultsContainer.style.display = "block";
+      renderResults(poll, resultsContainer);
+    }
+
+    document.getElementById("voteModal").style.display = "flex";
+  } catch (error) {
+    alert("Не удалось загрузить опрос");
+    console.error(error);
+  }
+}
+
+function renderResults(poll, container) {
+  const maxVotes = Math.max(...poll. options.map((o) => o.votes), 1);
+
+  container.innerHTML = `
+    <div class="results-header">
+      <span>Всего голосов:  <strong>${poll.totalVotes}</strong></span>
+    </div>
+    ${poll.options
+      .map((opt) => {
+        const percentage = poll.totalVotes > 0 
+          ? ((opt. votes / poll.totalVotes) * 100).toFixed(1) 
+          : 0;
+        return `
+          <div class="result-item">
+            <div class="result-text">
+              <span>${escapeHtml(opt.text)}</span>
+              <span>${opt.votes} (${percentage}%)</span>
+            </div>
+            <div class="result-bar">
+              <div class="result-fill" style="width:  ${percentage}%"></div>
+            </div>
+          </div>
+        `;
+      })
+      .join("")}
+  `;
+}
+
+async function submitVote(pollId, optionId) {
+  try {
+    const response = await fetch(`${API_URL}/${pollId}/vote`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON. stringify({ optionId }),
+    });
+
+    if (response. ok) {
+      const poll = await response. json();
+      const resultsContainer = document. getElementById("voteResults");
+      document.getElementById("voteOptions").style.display = "none";
+      resultsContainer.style. display = "block";
+      renderResults(poll, resultsContainer);
+      loadPolls();
+      alert("Ваш голос учтён!");
+    } else {
+      const err = await response. json();
+      alert("Ошибка: " + (err.error || "неизвестная ошибка"));
+    }
+  } catch (error) {
+    console. error("Ошибка голосования:", error);
+    alert("Не удалось проголосовать");
+  }
+}
+
+function closeVoteModal() {
+  document.getElementById("voteModal").style.display = "none";
+}
+
+async function openEditModal(id) {
+  try {
+    const response = await fetch(`${API_URL}/${id}`);
+    if (!response.ok) throw new Error("Опрос не найден");
+    const poll = await response.json();
+
+    document.getElementById("editId").value = poll.id;
+    document.getElementById("editQuestion").value = poll.question;
+    document.getElementById("editCategory").value = poll.category || "";
+    document. getElementById("editStatus").value = poll.isActive. toString();
+
+    document.getElementById("editModal").style.display = "flex";
+  } catch (error) {
+    alert("Не удалось загрузить опрос для редактирования");
+    console.error(error);
+  }
+}
+
+function closeEditModal() {
+  document.getElementById("editModal").style.display = "none";
+}
+
+async function saveEditedPoll() {
+  const id = parseInt(document.getElementById("editId").value, 10);
+  const question = document. getElementById("editQuestion").value.trim();
+  const category = document.getElementById("editCategory").value.trim();
+  const isActive = document.getElementById("editStatus").value === "true";
+
+  if (!question) {
+    alert("Вопрос обязателен!");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type":  "application/json" },
+      body:  JSON.stringify({ question, category, isActive }),
+    });
+
+    if (response. ok) {
+      closeEditModal();
+      loadPolls();
+      loadCategories();
+      alert("Опрос обновлён!");
+    } else {
+      const err = await response.json();
+      alert("Ошибка сохранения: " + (err.error || "неизвестно"));
+    }
+  } catch (error) {
+    console.error("Ошибка сохранения:", error);
+    alert("Не удалось сохранить изменения");
+  }
+}
+
+async function searchPolls() {
+  const q = document.getElementById("searchInput").value.trim().toLowerCase();
+  const response = await fetch(API_URL);
+  const polls = await response.json();
+  const filtered = polls.filter((p) =>
+    p.question.toLowerCase().includes(q)
+  );
+  renderPolls(filtered);
+}
+
+async function filterByStatus() {
+  const status = document.getElementById("statusFilter").value;
+  const url = status ?  `${API_URL}? status=${status}` : API_URL;
+  const response = await fetch(url);
+  const polls = await response. json();
+  renderPolls(polls);
+}
+
+async function filterByCategory() {
+  const category = document.getElementById("categoryFilter").value;
+  const url = category ? `${API_URL}?category=${category}` : API_URL;
+  const response = await fetch(url);
+  const polls = await response.json();
+  renderPolls(polls);
+}
+
+async function loadCategories() {
+  try {
+    const response = await fetch(API_URL);
+    const polls = await response.json();
+    const categories = [... new Set(polls. map((p) => p.category).filter(Boolean))];
+
+    const select = document.getElementById("categoryFilter");
+    select.innerHTML =
+      '<option value="">Все категории</option>' +
+      categories.map((c) => `<option value="${c}">${c}</option>`).join("");
+  } catch (error) {
+    console.error("Ошибка загрузки категорий:", error);
+  }
+}
+
+function updateStats(polls) {
+  const total = polls.length;
+  const active = polls.filter((p) => p.isActive).length;
+  const votes = polls.reduce((sum, p) => sum + p.totalVotes, 0);
+
+  document.getElementById("totalPolls").textContent = total;
+  document.getElementById("activePolls").textContent = active;
+  document.getElementById("totalVotes").textContent = votes;
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    closeVoteModal();
+    closeEditModal();
+  }
+});
