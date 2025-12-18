@@ -7,7 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
-app.use(express.urlencoded({ extended:  true }));
+app.use(express.urlencoded({ extended: true }));
 app.use(logger);
 
 app.use(express.static(path.join(__dirname, "public")));
@@ -23,5 +23,5 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Сервер "Голосование за вариант" запущен:  http://localhost:${PORT}`);
+  console.log(`Сервер "Голосование за вариант" запущен: http://localhost:${PORT}`);
 });

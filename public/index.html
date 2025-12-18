@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Голосование за вариант</title>
+    <link rel="stylesheet" href="./styles/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Голосование за вариант</h1>
+        <p>Создавайте опросы и голосуйте за понравившиеся варианты</p>
+      </header>
+
+      <div class="content">
+        <aside class="sidebar">
+          <div class="card">
+            <h2>Создать опрос</h2>
+            <div class="form-group">
+              <label>Вопрос *</label>
+              <input
+                type="text"
+                id="question"
+                placeholder="Например: Какой ваш любимый цвет?"
+              />
+            </div>
+            <div class="form-group">
+              <label>Категория</label>
+              <input
+                type="text"
+                id="category"
+                placeholder="IT, Спорт, Личное..."
+              />
+            </div>
+            <div class="form-group">
+              <label>Варианты ответов * (минимум 2)</label>
+              <div id="optionsContainer">
+                <input
+                  type="text"
+                  class="option-input"
+                  placeholder="Вариант 1"
+                />
+                <input
+                  type="text"
+                  class="option-input"
+                  placeholder="Вариант 2"
+                />
+              </div>
+              <button onclick="addOptionField()" class="btn btn-small">
+                + Добавить вариант
+              </button>
+            </div>
+            <button onclick="createPoll()" class="btn btn-primary">
+              Создать опрос
+            </button>
+          </div>
+
+          <div class="card stats">
+            <h3>Статистика</h3>
+            <div class="stat-item">
+              <span>Опросов всего: </span>
+              <span id="totalPolls">0</span>
+            </div>
+            <div class="stat-item">
+              <span>Активных:</span>
+              <span id="activePolls">0</span>
+            </div>
+            <div class="stat-item">
+              <span>Всего голосов: </span>
+              <span id="totalVotes">0</span>
+            </div>
+          </div>
+        </aside>
+
+        <main class="main-content">
+          <div class="card">
+            <div class="search-bar">
+              <select id="statusFilter" onchange="filterByStatus()">
+                <option value="">Все опросы</option>
+                <option value="active">Активные</option>
+                <option value="closed">Закрытые</option>
+              </select>
+              <select id="categoryFilter" onchange="filterByCategory()">
+                <option value="">Все категории</option>
+              </select>
+              <input
+                type="text"
+                id="searchInput"
+                placeholder="Поиск по вопросу..."
+                onkeyup="searchPolls()"
+              />
+            </div>
+          </div>
+
+          <div id="pollsList"></div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Модальное окно для голосования -->
+    <div id="voteModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modalQuestion">Вопрос</h2>
+          <span class="close" onclick="closeVoteModal()">×</span>
+        </div>
+        <div class="modal-body">
+          <div id="voteOptions"></div>
+          <div id="voteResults" class="vote-results"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модальное окно для редактирования -->
+    <div id="editModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Редактировать опрос</h2>
+          <span class="close" onclick="closeEditModal()">×</span>
+        </div>
+        <div class="modal-body">
+          <form id="editForm" onsubmit="event.preventDefault(); saveEditedPoll();">
+            <input type="hidden" id="editId" />
+            <div class="form-group">
+              <label>Вопрос *</label>
+              <input type="text" id="editQuestion" required />
+            </div>
+            <div class="form-group">
+              <label>Категория</label>
+              <input type="text" id="editCategory" />
+            </div>
+            <div class="form-group">
+              <label>Статус</label>
+              <select id="editStatus">
+                <option value="true">Активный</option>
+                <option value="false">Закрытый</option>
+              </select>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="btn" onclick="closeEditModal()">
+                Отмена
+              </button>
+              <button type="submit" class="btn btn-primary">
+                Сохранить изменения
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script src="./js/app.js"></script>
+  </body>
+</html>
